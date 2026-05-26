@@ -1,1 +1,180 @@
 
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — Suporte IT</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #222; }
+    .topbar { background: #185FA5; color: white; padding: 14px 24px; display: flex; align-items: center; gap: 12px; }
+    .topbar h1 { font-size: 16px; font-weight: 600; }
+    .topbar span { font-size: 13px; opacity: 0.7; margin-left: auto; }
+    .login { display: flex; align-items: center; justify-content: center; min-height: calc(100vh - 52px); }
+    .login-box { background: white; border-radius: 12px; padding: 32px; width: 100%; max-width: 360px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+    .login-box h2 { font-size: 18px; margin-bottom: 6px; }
+    .login-box p { font-size: 13px; color: #888; margin-bottom: 20px; }
+    .login-box input { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; margin-bottom: 12px; outline: none; }
+    .login-box input:focus { border-color: #185FA5; }
+    .btn { width: 100%; padding: 10px; background: #185FA5; color: white; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; font-weight: 500; }
+    .btn:hover { background: #0C447C; }
+    .err { font-size: 13px; color: #e24b4a; margin-top: 8px; display: none; }
+    .main { padding: 24px; max-width: 1000px; margin: 0 auto; display: none; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+    .stat { background: white; border-radius: 10px; padding: 16px 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+    .stat .num { font-size: 28px; font-weight: 600; color: #185FA5; }
+    .stat .label { font-size: 13px; color: #888; margin-top: 2px; }
+    .section-title { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+    .conversa { background: white; border-radius: 10px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); overflow: hidden; }
+    .conv-header { display: flex; align-items: center; gap: 10px; padding: 14px 16px; cursor: pointer; }
+    .conv-header:hover { background: #fafafa; }
+    .cat-badge { font-size: 11px; padding: 3px 9px; border-radius: 10px; font-weight: 500; }
+    .cat-password { background: #E6F1FB; color: #0C447C; }
+    .cat-vpn { background: #EEEDFE; color: #3C3489; }
+    .cat-email { background: #EAF3DE; color: #27500A; }
+    .cat-impressora { background: #FAEEDA; color: #633806; }
+    .cat-geral { background: #f0f0f0; color: #555; }
+    .conv-data { font-size: 12px; color: #aaa; margin-left: auto; }
+    .conv-preview { font-size: 13px; color: #555; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 400px; }
+    .conv-body { display: none; padding: 0 16px 16px; border-top: 1px solid #f0f0f0; }
+    .conv-body.open { display: block; }
+    .msg-row { margin-top: 10px; }
+    .msg-row .who { font-size: 11px; font-weight: 600; color: #888; margin-bottom: 3px; text-transform: uppercase; }
+    .msg-row .txt { font-size: 13px; line-height: 1.55; background: #f5f5f5; padding: 8px 12px; border-radius: 8px; color: #333; }
+    .msg-row.bot .txt { background: #E6F1FB; }
+    .loading { text-align: center; padding: 40px; color: #aaa; font-size: 14px; }
+    .chevron { transition: transform 0.2s; color: #aaa; }
+    .chevron.open { transform: rotate(90deg); }
+    @media (max-width: 600px) { .stats { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <i class="ti ti-shield-lock" style="font-size:20px;"></i>
+  <h1>Painel de Administração — Suporte IT</h1>
+  <span id="adminEmail"></span>
+</div>
+
+<!-- Login -->
+<div class="login" id="loginSection">
+  <div class="login-box">
+    <h2>Acesso restrito</h2>
+    <p>Introduz a password de administrador para ver o histórico de conversas.</p>
+    <input type="password" id="adminKey" placeholder="Password de administrador" onkeydown="if(event.key==='Enter')login()" />
+    <button class="btn" onclick="login()">Entrar</button>
+    <div class="err" id="loginErr">Password incorreta. Tenta novamente.</div>
+  </div>
+</div>
+
+<!-- Painel principal -->
+<div class="main" id="mainSection">
+  <div class="stats">
+    <div class="stat">
+      <div class="num" id="totalConv">—</div>
+      <div class="label">Conversas totais</div>
+    </div>
+    <div class="stat">
+      <div class="num" id="totalHoje">—</div>
+      <div class="label">Conversas hoje</div>
+    </div>
+    <div class="stat">
+      <div class="num" id="catMaisComum">—</div>
+      <div class="label">Categoria mais comum</div>
+    </div>
+  </div>
+
+  <div class="section-title">Últimas conversas</div>
+  <div id="conversasList"><div class="loading"><i class="ti ti-loader" style="font-size:20px;"></i> A carregar...</div></div>
+</div>
+
+<script>
+let adminKeyValue = '';
+
+async function login() {
+  const key = document.getElementById('adminKey').value.trim();
+  if (!key) return;
+
+  const res = await fetch('/api/admin', {
+    headers: { 'x-admin-key': key }
+  });
+
+  if (res.status === 401) {
+    document.getElementById('loginErr').style.display = 'block';
+    return;
+  }
+
+  adminKeyValue = key;
+  document.getElementById('loginSection').style.display = 'none';
+  document.getElementById('mainSection').style.display = 'block';
+
+  const conversas = await res.json();
+  renderConversas(conversas);
+}
+
+function renderConversas(conversas) {
+  // Stats
+  document.getElementById('totalConv').textContent = conversas.length;
+
+  const hoje = new Date().toDateString();
+  const hojeCount = conversas.filter(c => new Date(c.data).toDateString() === hoje).length;
+  document.getElementById('totalHoje').textContent = hojeCount;
+
+  const cats = {};
+  conversas.forEach(c => { cats[c.categoria] = (cats[c.categoria] || 0) + 1; });
+  const topCat = Object.entries(cats).sort((a,b) => b[1]-a[1])[0];
+  document.getElementById('catMaisComum').textContent = topCat ? topCat[0] : '—';
+
+  // Lista
+  const lista = document.getElementById('conversasList');
+  if (conversas.length === 0) {
+    lista.innerHTML = '<div class="loading">Ainda não há conversas registadas.</div>';
+    return;
+  }
+
+  lista.innerHTML = conversas.map((c, i) => {
+    const data = new Date(c.data).toLocaleString('pt-PT');
+    const primeiraMsg = c.mensagens?.[0];
+    const preview = typeof primeiraMsg?.content === 'string'
+      ? primeiraMsg.content.replace(/\[Categoria:[^\]]+\]\s*/,'')
+      : '(imagem enviada)';
+
+    const msgs = c.mensagens?.map(m => {
+      const txt = typeof m.content === 'string'
+        ? m.content.replace(/\[Categoria:[^\]]+\]\s*/,'')
+        : '🖼️ (imagem enviada)';
+      return `<div class="msg-row ${m.role === 'user' ? 'user' : 'bot'}">
+        <div class="who">${m.role === 'user' ? '👤 Colaborador' : '🤖 Bot'}</div>
+        <div class="txt">${txt.replace(/\n/g,'<br>')}</div>
+      </div>`;
+    }).join('') || '';
+
+    return `<div class="conversa">
+      <div class="conv-header" onclick="toggleConv(${i})">
+        <i class="ti ti-chevron-right chevron" id="chev${i}"></i>
+        <span class="cat-badge cat-${c.categoria}">${c.categoria}</span>
+        <span class="conv-preview">${preview}</span>
+        <span class="conv-data">${data}</span>
+      </div>
+      <div class="conv-body" id="conv${i}">
+        ${msgs}
+        <div class="msg-row bot">
+          <div class="who">🤖 Última resposta do bot</div>
+          <div class="txt">${(c.resposta||'').replace(/\n/g,'<br>')}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleConv(i) {
+  const body = document.getElementById('conv' + i);
+  const chev = document.getElementById('chev' + i);
+  body.classList.toggle('open');
+  chev.classList.toggle('open');
+}
+</script>
+</body>
+</html>
