@@ -1,9 +1,11 @@
+import { put } from '@vercel/blob';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método não permitido' });
   }
 
-  const { messages, imageData } = req.body;
+  const { messages, category } = req.body;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -30,8 +32,25 @@ Regras:
     });
 
     const data = await response.json();
+    const reply = data.content?.[0]?.text || 'Erro na resposta.';
+
+    // Guardar conversa no Blob
+    const conversa = {
+      id: Date.now(),
+      data: new Date().toISOString(),
+      categoria: category || 'geral',
+      mensagens: messages,
+      resposta: reply,
+    };
+
+    await put(`conversas/${conversa.id}.json`, JSON.stringify(conversa), {
+      access: 'public',
+      contentType: 'application/json',
+    });
+
     res.status(200).json(data);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 }
